@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
+    <title>Reform RP Test</title>
+    <style>
+        /* Пастельно-темная палитра Telegram (глубокий матовый фон, приглушенные пастельные тона) */
+        :root {
+            --bg-tg: #182533;               /* Классический темно-синий фон TG */
+            --card-tg: #223140;             /* Панели и карточки TG */
+            --tg-pastel-blue: #70b7f5;      /* Мягкий пастельный синий текст/акцент */
+            --tg-pastel-purple: #b9a3e3;    /* Пастельный лавандовый */
+            --text-main: #f5f7fa;           /* Бело-серый текст */
+            --text-muted: #7e94a8;          /* Приглушенный текст TG */
+            --correct-color: #70cc92;       /* Пастельный матовый зеленый */
+            --wrong-color: #e5878d;         /* Пастельный матовый красный */
+            --border-tg: #2b394a;
+        }
+
+        /* Полный запрет выделения текста */
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            transition: all 0.2s ease-in-out;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-tg);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Движущийся фон из полупрозрачных миньонов */
+        #matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0.12;
+            overflow: hidden;
+        }
+
+        .falling-gif {
+            position: absolute;
+            width: 75px;
+            height: auto;
+            animation: moveDiagonal linear infinite;
+        }
+
+        @keyframes moveDiagonal {
+            0% { transform: translate(-100px, -100px) rotate(0deg); }
+            100% { transform: translate(110vw, 110vh) rotate(360deg); }
+        }
+
+        /* Карточка в стиле Telegram (плоская, матовая, без градиентов) */
+        .quiz-container {
+            background: var(--card-tg);
+            border: 1px solid var(--border-tg);
+            border-radius: 14px;
+            padding: 30px;
+            width: 92%;
+            max-width: 560px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            position: relative;
+            z-index: 10;
+            max-height: 95vh;
+            overflow-y: auto;
+        }
+
+        .quiz-container::-webkit-scrollbar { width: 4px; }
+        .quiz-container::-webkit-scrollbar-thumb { background: var(--border-tg); border-radius: 4px; }
+
+        /* Заголовки без градиентов */
+        .header-title {
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .sub-header {
+            font-size: 14px;
+            text-align: center;
+            color: var(--tg-pastel-blue);
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .meta-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        /* Однотонный плоский индикатор прогресса */
+        .progress-container {
+            width: 100%;
+            background: var(--bg-tg);
+            height: 4px;
+            border-radius: 2px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--tg-pastel-blue);
+            width: 0%;
+        }
+
+        /* Вопросы */
+        .question-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            line-height: 1.5;
+            color: var(--text-main);
+        }
+
+        /* Списки ответов а-ля викторины в TG каналах */
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option-btn {
+            background: transparent;
+            border: 1px solid var(--border-tg);
+            border-radius: 10px;
+            padding: 14px 18px;
+            text-align: left;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            color: var(--text-main);
+            outline: none;
+        }
+
+        .option-btn:hover {
+            background: rgba(112, 183, 245, 0.08);
+            border-color: var(--tg-pastel-blue);
+        }
+
+        /* Однотонные пастельные статусы ответов */
+        .option-btn.correct {
+            background: rgba(112, 204, 146, 0.15) !important;
+            border-color: var(--correct-color) !important;
+            color: var(--correct-color) !important;
+            animation: popSuccess 0.4s ease;
+        }
+
+        .option-btn.wrong {
+            background: rgba(229, 135, 141, 0.15) !important;
+            border-color: var(--wrong-color) !important;
+            color: var(--wrong-color) !important;
+            animation: shakeError 0.4s ease;
+        }
+
+        @keyframes popSuccess {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.01); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shakeError {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+
+        /* Финальный экран */
+        .results-screen {
+            display: none;
+            text-align: center;
+        }
+
+        .secret-box {
+            background: var(--bg-tg);
+            border: 1px solid var(--border-tg);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 25px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--tg-pastel-purple);
+        }
+
+        @media (max-width: 480px) {
+            .quiz-container { padding: 20px; }
+            .header-title { font-size: 20px; }
+            .question-text { font-size: 16px; }
+            .option-btn { padding: 12px 14px; font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="matrix-bg"></div>
+
+<div class="quiz-container">
+    <div id="quiz-screen">
+        <div class="header-title">Reform RP Test</div>
+        <div class="sub-header"></div>
+        <div class="meta-info">
+            <span id="counter">Вопрос 1 из 15</span>
+            <span id="status-tag" style="color: var(--tg-pastel-purple);">ВЕРИФИКАЦИЯ</span>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="question-text" id="question-text">Загрузка данных...</div>
+        <div class="options-list" id="options-container"></div>
+    </div>
+
+    <!-- Результаты со статусом обновления и форума -->
+    <div class="results-screen" id="results-screen">
+        <div class="header-title" style="color: var(--correct-color);">Тест Успешно Пройден</div>
+        <p style="margin: 15px 0; color: var(--text-main); font-size: 15px; line-height: 1.6;">
+            
+        </p>
+        <div class="secret-box">
+            ГЛОБАЛЬНОЕ ОБНОВЛЕНИЕ ПРОЕКТА БУДЕТ...<br>
+            <span style="color: var(--tg-pastel-blue); display: block; margin-top: 5px;">СОЗДАНИЕ ФОРУМА</span>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 30px;"></p>
+    </div>
+</div>
+
+<script>
+    // Фон: Движущиеся полупрозрачные миньоны
+    const bgContainer = document.getElementById('matrix-bg');
+    const gifUrl = "https://media.tenor.com/blthaQMub3gAAAAi/minion-minions.gif";
+    const totalGifs = 22;
+
+    for (let i = 0; i < totalGifs; i++) {
+        const img = document.createElement('img');
+        img.src = gifUrl;
+        img.className = 'falling-gif';
+        img.style.left = Math.random() * 120 - 20 + 'vw'; 
+        img.style.top = Math.random() * -100 - 60 + 'px';
+        img.style.animationDuration = Math.random() * 9 + 6 + 's';
+        img.style.animationDelay = Math.random() * -16 + 's';
+        bgContainer.appendChild(img);
+    }
+
+    // Жесткие вопросы ПО ПОЛИТИКЕ
+    const questions = [
+        { q: "Какая политическая идеология ставит индивидуальные свободы и рыночную экономику выше контроля государства?", options: ["Социализм", "Либерализм", "Консерватизм", "Фашизм"], correct: 1 },
+        { q: "Форма правления, при которой верховная власть принадлежит одному лицу и передается исключительно по наследству:", options: ["Республика", "Олигархия", "Монархия", "Теократия"], correct: 2 },
+        { q: "Какая избирательная система распределяет мандаты в парламенте строго пропорционально набранным партией голосам?", options: ["Мажоритарная", "Смешанная", "Пропорциональная", "Плебисцитарная"], correct: 2 },
+        { q: "Какой термин описывает полное отсутствие государственной власти и каких-либо политических институтов управления?", options: ["Тоталитаризм", "Анархизм", "Плутократия", "Охлократия"], correct: 1 },
+        { q: "Кто написал культовый политический трактат 'Государь', заложивший основы реальной политики?", options: ["Никколо Макиавелли", "Томас Гоббс", "Джон Локк", "Карл Маркс"], correct: 0 },
+        { q: "Тип государственного устройства, при котором субъекты обладают собственной конституцией и законодательными органами:", options: ["Унитарное государство", "Федерация", "Конфедерация", "Протекторат"], correct: 1 },
+        { q: "Какая ветвь власти монопольно занимается созданием, изменением и принятием общегосударственных законов?", options: ["Исполнительная", "Законодательная", "Судебная", "Муниципальная"], correct: 1 },
+        { q: "Политический режим, стремящийся к тотальному контролю государства над абсолютно всеми сферами жизни граждан:", options: ["Авторитаризм", "Тоталитаризм", "Демократия", "Аристократия"], correct: 1 },
+        { q: "Как в политологии называют массовое уклонение граждан от участия в выборах и политической жизни?", options: ["Абсентеизм", "Люстрация", "Плюрализм", "Популизм"], correct: 0 },
+        { q: "Что является ключевым и неотъемлемым признаком любого суверенного государства?", options: ["Наличие конституционного суда", "Исключительное право на сбор налогов и эмиссию денег", "Обязательное наличие рыночной экономики", "Двухпалатный парламент"], correct: 1 },
+        { q: "Какое политическое течение базируется на защите традиций, стабильности общества и устоявшихся институтов?", options: ["Радикализм", "Консерватизм", "Либертарианство", "Социал-демократия"], correct: 1 },
+        { q: "Что означает термин 'политический плюрализм'?", options: ["Многообразие независимых политических мнений, взглядов и партий", "Диктат одной правящей идеологии", "Слияние церкви и государственного аппарата", "Отмена избирательного права"], correct: 0 },
+        { q: "Как называется процесс передачи объектов государственной собственности в частное владение?", options: ["Национализация", "Приватизация", "Экспроприация", "Модернизация"], correct: 1 },
+        { q: "Форма правления, где высшие органы власти выбираются населением на определенный фиксированный срок:", options: ["Монархия", "Республика", "Диктатура", "Хунта"], correct: 1 },
+        { q: "В чем заключается фундаментальная суть концепции 'меритократии'?", options: ["Власть принадлежит самым богатым элитам", "Власть принадлежит наиболее способным, умным и достойным людям", "Управление осуществляется исключительно военными структурами", "Прямое управление государством через религиозных лидеров"], correct: 1 }
+    ];
+
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let canClick = true;
+
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const counter = document.getElementById('counter');
+    const progressBar = document.getElementById('progress-bar');
+    const quizScreen = document.getElementById('quiz-screen');
+    const resultsScreen = document.getElementById('results-screen');
+
+    function loadQuestion() {
+        canClick = true;
+        const qData = questions[currentQuestionIndex];
+        
+        counter.innerText = `Вопрос ${currentQuestionIndex + 1} из ${questions.length}`;
+        progressBar.style.width = `${(currentQuestionIndex / questions.length) * 100}%`;
+        questionText.innerText = qData.q;
+        optionsContainer.innerHTML = '';
+
+        qData.options.forEach((opt, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(idx, btn);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selectedIdx, btnEl) {
+        if (!canClick) return;
+        canClick = false;
+
+        const correctIdx = questions[currentQuestionIndex].correct;
+        const allBtns = optionsContainer.getElementsByClassName('option-btn');
+
+        if (selectedIdx === correctIdx) {
+            btnEl.classList.add('correct');
+            score++;
+        } else {
+            btnEl.classList.add('wrong');
+            allBtns[correctIdx].classList.add('correct');
+        }
+
+        setTimeout(() => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                loadQuestion();
+            } else {
+                finishQuiz();
+            }
+        }, 1000);
+    }
+
+    function finishQuiz() {
+        progressBar.style.width = '100%';
+        quizScreen.style.display = 'none';
+        resultsScreen.style.display = 'block';
+        
+        // Отключаем защиту блокировки выхода после успешного прохождения
+        window.onbeforeunload = null;
+    }
+
+    // === ЖЕСТКАЯ БЛОКИРОВКА ВЫХОДА И ЗАЩИТА СТРАНИЦЫ ===
+
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    document.addEventListener('keydown', function(e) {
+        if (
+            e.keyCode === 123 || 
+            (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || 
+            (e.ctrlKey && e.keyCode === 85)
+        ) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    document.addEventListener('copy', e => e.preventDefault());
+    document.addEventListener('cut', e => e.preventDefault());
+
+    // Запрет на закрытие / перезагрузку страницы
+    window.onbeforeunload = function(e) {
+        const msg = "Вы не завершили Reform RP Test! Прогресс получения FORUM UPDATE будет аннулирован.";
+        e.removeAttribute('returnValue');
+        e.returnValue = msg;
+        return msg;
+    };
+
+    loadQuestion();
+</script>
+</body>
+</html>
